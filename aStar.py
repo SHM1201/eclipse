@@ -1,90 +1,145 @@
+class Node():
+    """A node class for A* Pathfinding"""
+
+    def __init__(self, parent=None, position=None):
+        self.parent = parent
+        self.position = position
+
+        self.g = 0
+        self.h = 0
+        self.f = 0
+
+    def __eq__(self, other):
+        return self.position == other.position
 
 
-def heuristic(vertice):
-    H_dist={
-        'A': 11,
-        'B': 6,
-        'C': 99,
-        'D': 1,
-        'E': 7,
-        'G': 0,
-    }
+def astar(maze, start, end):
+    """Returns a list of tuples as a path from the given start to the given end in the given maze"""
 
-    return H_dist[vertice]
+    # Create start and end node
+    start_node = Node(None, start)
+    start_node.g = start_node.h = start_node.f = 0
+    end_node = Node(None, end)
+    end_node.g = end_node.h = end_node.f = 0
 
-build_graph={
-    'A': [('B', 2), ('E', 3)],
-    'B': [('C', 1),('G', 9)],
-    'C': None,
-    'E': [('D', 6)],
-    'D': [('G', 1)],    
-}
+    # Initialize both open and closed list
+    open_list = []
+    closed_list = []
 
-def get_neighbpurs(vertex):
-    if vertex in build_graph:
-        return build_graph[vertex]
-    else:
-        return None
+    # Add the start node
+    open_list.append(start_node)
 
-def A_Star_Algorith(start_point,end_point):
-    open_list=set(start_point)
-    closed_list=set()
-
-    g={}
-    adjacency={}
-
-    g[start_point]=0
-    adjacency[start_point]=start_point
-
+    # Loop until you find the end
     while len(open_list) > 0:
-        n=None
 
-        for vertice in open_list:
-            if n==None or g[vertice] + heuristic(vertice) < g[n] + heuristic(n):
-                n=vertice
+        # Get the current node
+        current_node = open_list[0]
+        current_index = 0
+        for index, item in enumerate(open_list):
+            if item.f < current_node.f:
+                current_node = item
+                current_index = index
 
-        if n==end_point or build_graph[n]==None:
-            pass
-        else:
-            for (m,weight) in get_neighbpurs(n):
-                if m not in open_list and m not in closed_list:
-                    open_list.add(m)
-                    g[m]=g[n]+weight
-                    adjacency[m]=n
-                
-                else:
-                    if g[m]>g[n]+weight:
-                        g[m]=g[n]+weight
-                        adjacency[m]=n
+        # Pop current off open list, add to closed list
+        open_list.pop(current_index)
+        closed_list.append(current_node)
 
-                        if m in closed_list:
-                            closed_list.remove(m)
-                            open_list.add(m)
-        
-        if n==None:
-            print("No Solution Possible ")
-            return None
-        
-        if n==end_point:
-            result=[]
+        # Found the goal
+        if current_node == end_node:
+            path = []
+            current = current_node
+            while current is not None:
+                path.append(current.position)
+                current = current.parent
+            return path[::-1] # Return reversed path
 
-            while adjacency[n]!=n:
-                result.append(n)
-                n=adjacency[n]
-            
-            result.append(start_point)
-            result.reverse()
+        # Generate children
+        children = []
+        for new_position in [(0, -1), (0, 1), (-1, 0), (1, 0), (-1, -1), (-1, 1), (1, -1), (1, 1)]: # Adjacent squares
 
-            print(result)
-            return result
+            # Get node position
+            node_position = (current_node.position[0] + new_position[0], current_node.position[1] + new_position[1])
 
-        open_list.remove(n)
-        closed_list.add(n)
+            # Make sure within range
+            if node_position[0] > (len(maze) - 1) or node_position[0] < 0 or node_position[1] > (len(maze[len(maze)-1]) -1) or node_position[1] < 0:
+                continue
 
-    print("No possible solution")
-    return None
+            # Make sure walkable terrain
+            if maze[node_position[0]][node_position[1]] != 0:
+                continue
+
+            # Create new node
+            new_node = Node(current_node, node_position)
+
+            # Append
+            children.append(new_node)
+
+        # Loop through children
+        for child in children:
+
+            # Child is on the closed list
+            for closed_child in closed_list:
+                if child == closed_child:
+                    continue
+
+            # Create the f, g, and h values
+            child.g = current_node.g + 1
+            child.h = ((child.position[0] - end_node.position[0]) ** 2) + ((child.position[1] - end_node.position[1]) ** 2)
+            child.f = child.g + child.h
+
+            # Child is already in the open list
+            for open_node in open_list:
+                if child == open_node and child.g > open_node.g:
+                    continue
+
+            # Add the child to the open list
+            open_list.append(child)
 
 
-A_Star_Algorith("A","G")
+def main():
 
-            
+    maze = [
+            [0, 0, 0, 0, 1, 0, 0, 0, 0],
+            [0, 0, 0, 0, 1, 0, 0, 0, 0],
+            [0, 0, 0, 0, 1, 0, 0, 0, 0],
+            [0, 0, 0, 0, 1, 0, 0, 0, 0],
+            [0, 0, 0, 0, 1, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 1, 0],
+            [0, 0, 0, 0, 1, 0, 0, 0, 0],
+            [0, 0, 0, 0, 1, 0, 0, 0, 0],
+            ]
+
+    print("Grid Looks like this:\n\n")
+    for i in range(len(maze)):
+        for j in range(len(maze[i])):
+            if maze[i][j]:
+                print("|", end=" ")
+            else:
+                print("_", end=" ")
+        print()
+    print("\n")
+    print("Enter start point (0-indexed): ")
+    start = tuple(map(int, input().split()))
+    
+    print("Enter end point (0-indexed): ")
+    end = tuple(map(int, input().split()))
+
+    path = astar(maze, start, end)
+    print("Generating path...")
+    print("Path:",path)
+    c=1
+    for i in range(len(maze)):
+        for j in range(len(maze[i])):
+            if (i,j) in path:
+                print(c, end=" ")
+                c+=1
+                continue
+            if maze[i][j]:
+                print("|", end=" ")
+            else:
+                print("_", end=" ")
+        print()
+
+
+if __name__ == '__main__':
+    main()
